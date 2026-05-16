@@ -6,6 +6,7 @@
             "time": ["10:30", "22:00"],
             "roomid": "2609",
             "seatid": ["172"],
+            "signcode": "",
             "daysofweek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday", "Sunday"]
         }
     ]

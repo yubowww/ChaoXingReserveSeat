@@ -45,6 +45,8 @@ pip install numpy, opencv-python
 
 运行`python main.py -m debug`可以立即运行查看配置是否正确。
 
+运行`python main.py -m sign`可以执行自动签到（会自动查找当前可签到的预约记录并提交签到请求）。
+
 关于运行的方式，现在提供了多种运行方式：
 
 - Linux环境下：
@@ -84,6 +86,7 @@ xxxxxxx,xxxxxxx
         "time": ["08:00","22:00"], // 预约的起始时间
         "roomid":"2609", //2609:四楼外圈,5483:四楼内圈,2610:五楼外圈,5484:五楼内圈
         "seatid":"002", // 注意要用0补全至3位数，例如6号座位应该填006
+        "signcode":"1234", // 可选，签到码（如学校需要签到码可填写）
         "daysofweek": ["Monday" , "Tuesday", "Wednesday", "Thursday", "Friday"]
         },
         {"username": "xxxxxxxxxx",

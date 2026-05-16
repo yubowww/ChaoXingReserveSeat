@@ -30,6 +30,10 @@ class reserve:
             "https://office.chaoxing.com/front/third/apps/seat/code?id={}&seatNum={}"
         )
         self.submit_url = "https://office.chaoxing.com/data/apps/seat/submit"
+        self.reserve_list_url = (
+            "https://office.chaoxing.com/data/apps/seat/reservelist"
+        )
+        self.sign_url = "https://office.chaoxing.com/data/apps/seat/sign"
         self.seat_url = "https://office.chaoxing.com/data/apps/seat/getusedtimes"
         self.login_url = "https://passport2.chaoxing.com/fanyalogin"
         self.token = ""
@@ -290,3 +294,49 @@ class reserve:
         )
         logging.info(json.loads(html))
         return json.loads(html)["success"]
+
+    def _get_current_reservation(self):
+        params = {"indexId": 0, "pageSize": 100, "type": -1}
+        data = self.requests.get(
+            url=self.reserve_list_url, params=params, verify=True
+        ).json()
+        reserve_list = data.get("data", {}).get("reserveList", [])
+        candidates = [
+            item
+            for item in reserve_list
+            if item.get("type") == -1 and item.get("status") in [0, 3, 5]
+        ]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda item: item.get("startTime", 0))
+
+    def sign(self, sign_code=""):
+        reserve_info = self._get_current_reservation()
+        if not reserve_info:
+            logging.info("No reservable seat record found for sign in.")
+            return False
+
+        reserve_id = reserve_info.get("id")
+        payloads = [{"id": reserve_id}]
+        if sign_code:
+            payloads = [
+                {"id": reserve_id, "code": sign_code},
+                {"id": reserve_id, "signCode": sign_code},
+                {"id": reserve_id, "captcha": sign_code},
+                {"id": reserve_id},
+            ]
+
+        for payload in payloads:
+            for method in ["post", "get"]:
+                request_func = self.requests.post if method == "post" else self.requests.get
+                resp = request_func(url=self.sign_url, params=payload, verify=True)
+                try:
+                    res_json = resp.json()
+                except json.JSONDecodeError:
+                    continue
+                logging.info(f"Sign response: {res_json}")
+                if res_json.get("success"):
+                    return True
+                if "已签到" in str(res_json.get("msg", "")):
+                    return True
+        return False

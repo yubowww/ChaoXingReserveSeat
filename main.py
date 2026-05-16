@@ -41,7 +41,14 @@ def login_and_reserve(users, usernames, passwords, action, success_list=None):
         success_list = [False] * len(users)
     current_dayofweek = get_current_dayofweek(action)
     for index, user in enumerate(users):
-        username, password, times, roomid, seatid, daysofweek = user.values()
+        username = user.get("username", "")
+        password = user.get("password", "")
+        times = user.get("time", [])
+        roomid = user.get("roomid", "")
+        seatid = user.get("seatid", [])
+        daysofweek = user.get("daysofweek", [])
+        if isinstance(seatid, str):
+            seatid = [seatid]
         if action:
             username, password = (
                 usernames.split(",")[index],
@@ -64,6 +71,44 @@ def login_and_reserve(users, usernames, passwords, action, success_list=None):
             s.login(username, password)
             s.requests.headers.update({"Host": "office.chaoxing.com"})
             suc = s.submit(times, roomid, seatid, action)
+            success_list[index] = suc
+    return success_list
+
+
+def login_and_sign(users, usernames, passwords, action, success_list=None):
+    logging.info(
+        f"Global settings: \nSLEEPTIME: {SLEEPTIME}\nENDTIME: {ENDTIME}\nENABLE_SLIDER: {ENABLE_SLIDER}\nRESERVE_NEXT_DAY: {RESERVE_NEXT_DAY}"
+    )
+    if action and len(usernames.split(",")) != len(users):
+        raise Exception("user number should match the number of config")
+    if success_list is None:
+        success_list = [False] * len(users)
+    current_dayofweek = get_current_dayofweek(action)
+    for index, user in enumerate(users):
+        username = user.get("username", "")
+        password = user.get("password", "")
+        daysofweek = user.get("daysofweek", [])
+        sign_code = user.get("signcode", "")
+        if action:
+            username, password = (
+                usernames.split(",")[index],
+                passwords.split(",")[index],
+            )
+        if current_dayofweek not in daysofweek:
+            logging.info("Today not set to sign")
+            continue
+        if not success_list[index]:
+            logging.info(f"----------- {username} sign try -----------")
+            s = reserve(
+                sleep_time=SLEEPTIME,
+                max_attempt=MAX_ATTEMPT,
+                enable_slider=ENABLE_SLIDER,
+                reserve_next_day=RESERVE_NEXT_DAY,
+            )
+            s.get_login_status()
+            s.login(username, password)
+            s.requests.headers.update({"Host": "office.chaoxing.com"})
+            suc = s.sign(sign_code=sign_code)
             success_list[index] = suc
     return success_list
 
@@ -97,6 +142,16 @@ def main(users, action=False):
             return
 
 
+def sign(users, action=False):
+    current_time = get_current_time(action)
+    logging.info(f"start sign at {current_time}, action {'on' if action else 'off'}")
+    usernames, passwords = None, None
+    if action:
+        usernames, passwords = get_user_credentials(action)
+    success_list = login_and_sign(users, usernames, passwords, action)
+    print(f"sign success list {success_list}")
+
+
 def debug(users, action=False):
     logging.info(
         f"Global settings: \nSLEEPTIME: {SLEEPTIME}\nENDTIME: {ENDTIME}\nENABLE_SLIDER: {ENABLE_SLIDER}\nRESERVE_NEXT_DAY: {RESERVE_NEXT_DAY}"
@@ -107,8 +162,13 @@ def debug(users, action=False):
         usernames, passwords = get_user_credentials(action)
     current_dayofweek = get_current_dayofweek(action)
     for index, user in enumerate(users):
-        username, password, times, roomid, seatid, daysofweek = user.values()
-        if type(seatid) == str:
+        username = user.get("username", "")
+        password = user.get("password", "")
+        times = user.get("time", [])
+        roomid = user.get("roomid", "")
+        seatid = user.get("seatid", [])
+        daysofweek = user.get("daysofweek", [])
+        if isinstance(seatid, str):
             seatid = [seatid]
         if action:
             username, password = (
@@ -157,7 +217,7 @@ if __name__ == "__main__":
         "-m",
         "--method",
         default="reserve",
-        choices=["reserve", "debug", "room"],
+        choices=["reserve", "debug", "room", "sign"],
         help="for debug",
     )
     parser.add_argument(
@@ -167,7 +227,7 @@ if __name__ == "__main__":
         help="use --action to enable in github action",
     )
     args = parser.parse_args()
-    func_dict = {"reserve": main, "debug": debug, "room": get_roomid}
+    func_dict = {"reserve": main, "debug": debug, "room": get_roomid, "sign": sign}
     with open(args.user, "r+") as data:
         usersdata = json.load(data)["reserve"]
     func_dict[args.method](usersdata, args.action)
