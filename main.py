@@ -58,9 +58,7 @@ def login_and_reserve(users, usernames, passwords, action, success_list=None):
             logging.info("Today not set to reserve")
             continue
         if not success_list[index]:
-            logging.info(
-                f"----------- {username} -- {times} -- {seatid} try -----------"
-            )
+            logging.info(f"----------- reserve task #{index + 1} try -----------")
             s = reserve(
                 sleep_time=SLEEPTIME,
                 max_attempt=MAX_ATTEMPT,
@@ -98,7 +96,7 @@ def login_and_sign(users, usernames, passwords, action, success_list=None):
             logging.info("Today not set to sign")
             continue
         if not success_list[index]:
-            logging.info(f"----------- {username} sign try -----------")
+            logging.info(f"----------- sign task #{index + 1} try -----------")
             s = reserve(
                 sleep_time=SLEEPTIME,
                 max_attempt=MAX_ATTEMPT,
@@ -178,7 +176,7 @@ def debug(users, action=False):
         if current_dayofweek not in daysofweek:
             logging.info("Today not set to reserve")
             continue
-        logging.info(f"----------- {username} -- {times} -- {seatid} try -----------")
+        logging.info(f"----------- debug reserve task #{index + 1} try -----------")
         s = reserve(
             sleep_time=SLEEPTIME,
             max_attempt=MAX_ATTEMPT,
